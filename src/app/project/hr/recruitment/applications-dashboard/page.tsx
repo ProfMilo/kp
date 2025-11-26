@@ -95,17 +95,57 @@ const ApplicationsDashboardPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+
+  const handleScheduleInterview = () => {
+    if (!selectedCandidate || !scheduleDate) return;
+
+    setCandidates(prev => prev.map(c => {
+      if (c.id === selectedCandidate.id) {
+        return { ...c, status: 'shortlisted', interviewDate: scheduleDate };
+      }
+      return c;
+    }));
+
+    alert(`Interview scheduled for ${selectedCandidate.fullName} on ${scheduleDate}. Notification sent.`);
+    setIsScheduling(false);
+    setShowModal(false);
+    setScheduleDate('');
+  };
+
+  // Check for past interviews and update status
+  useEffect(() => {
+    const checkInterviewDates = () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      setCandidates(prev => prev.map(candidate => {
+        if (candidate.interviewDate && candidate.status === 'shortlisted') {
+          const interviewDate = new Date(candidate.interviewDate);
+          if (interviewDate < today) {
+            return { ...candidate, status: 'interviewed' };
+          }
+        }
+        return candidate;
+      }));
+    };
+
+    checkInterviewDates();
+    const interval = setInterval(checkInterviewDates, 60000 * 60); // Check every hour
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter and sort candidates
   useEffect(() => {
     let filtered = candidates.filter(candidate => {
       const matchesSearch = candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          candidate.position.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.position.toLowerCase().includes(searchTerm.toLowerCase());
+
       const matchesStatus = statusFilter === 'all' || candidate.status === statusFilter;
       const matchesDepartment = departmentFilter === 'all' || candidate.department === departmentFilter;
-      
+
       return matchesSearch && matchesStatus && matchesDepartment;
     });
 
@@ -113,12 +153,12 @@ const ApplicationsDashboardPage: React.FC = () => {
     filtered.sort((a, b) => {
       let aValue: any = a[sortBy as keyof Candidate];
       let bValue: any = b[sortBy as keyof Candidate];
-      
+
       if (sortBy === 'appliedDate') {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       }
-      
+
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -137,13 +177,13 @@ const ApplicationsDashboardPage: React.FC = () => {
   const currentCandidates = filteredCandidates.slice(startIndex, endIndex);
 
   const updateCandidateStatus = (id: string, newStatus: Candidate['status']) => {
-    setCandidates(prev => prev.map(candidate => 
+    setCandidates(prev => prev.map(candidate =>
       candidate.id === id ? { ...candidate, status: newStatus } : candidate
     ));
   };
 
   const addNote = (id: string, note: string) => {
-    setCandidates(prev => prev.map(candidate => 
+    setCandidates(prev => prev.map(candidate =>
       candidate.id === id ? { ...candidate, notes: note } : candidate
     ));
   };
@@ -275,7 +315,7 @@ const ApplicationsDashboardPage: React.FC = () => {
                 placeholder="Name, email, position..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
               />
             </div>
 
@@ -284,7 +324,7 @@ const ApplicationsDashboardPage: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="all">All Statuses</option>
                 <option value="new">New</option>
@@ -302,7 +342,7 @@ const ApplicationsDashboardPage: React.FC = () => {
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="all">All Departments</option>
                 <option value="IT">IT</option>
@@ -320,7 +360,7 @@ const ApplicationsDashboardPage: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="appliedDate">Application Date</option>
                 <option value="fullName">Name</option>
@@ -335,7 +375,7 @@ const ApplicationsDashboardPage: React.FC = () => {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="desc">Descending</option>
                 <option value="asc">Ascending</option>
@@ -361,6 +401,9 @@ const ApplicationsDashboardPage: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Interview
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Applied
@@ -408,6 +451,9 @@ const ApplicationsDashboardPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {candidate.interviewDate ? new Date(candidate.interviewDate).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(candidate.appliedDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -415,16 +461,18 @@ const ApplicationsDashboardPage: React.FC = () => {
                         <button
                           onClick={() => {
                             setSelectedCandidate(candidate);
+                            setScheduleDate(candidate.interviewDate || '');
+                            setIsScheduling(false);
                             setShowModal(true);
                           }}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="px-3 py-1 border border-gray-400 bg-gray-50 rounded text-sm font-medium text-gray-900 hover:bg-gray-100"
                         >
                           View
                         </button>
                         <select
                           value={candidate.status}
                           onChange={(e) => updateCandidateStatus(candidate.id, e.target.value as Candidate['status'])}
-                          className="text-sm border border-gray-300 rounded px-2 py-1"
+                          className="text-sm border border-gray-400 bg-gray-50 rounded px-2 py-1 text-gray-900"
                         >
                           <option value="new">New</option>
                           <option value="reviewing">Reviewing</option>
@@ -482,11 +530,10 @@ const ApplicationsDashboardPage: React.FC = () => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          page === currentPage
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === currentPage
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
                       >
                         {page}
                       </button>
@@ -527,22 +574,22 @@ const ApplicationsDashboardPage: React.FC = () => {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Personal Information</h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Name:</span> {selectedCandidate.fullName}</p>
-                    <p><span className="font-medium">Email:</span> {selectedCandidate.email}</p>
-                    <p><span className="font-medium">Phone:</span> {selectedCandidate.phone}</p>
-                    <p><span className="font-medium">Education:</span> {selectedCandidate.education}</p>
-                    <p><span className="font-medium">Experience:</span> {selectedCandidate.experience} years</p>
+                    <p><span className="font-medium text-gray-900">Name:</span> <span className="text-gray-700">{selectedCandidate.fullName}</span></p>
+                    <p><span className="font-medium text-gray-900">Email:</span> <span className="text-gray-700">{selectedCandidate.email}</span></p>
+                    <p><span className="font-medium text-gray-900">Phone:</span> <span className="text-gray-700">{selectedCandidate.phone}</span></p>
+                    <p><span className="font-medium text-gray-900">Education:</span> <span className="text-gray-700">{selectedCandidate.education}</span></p>
+                    <p><span className="font-medium text-gray-900">Experience:</span> <span className="text-gray-700">{selectedCandidate.experience} years</span></p>
                   </div>
                 </div>
 
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Application Details</h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Position:</span> {selectedCandidate.position}</p>
-                    <p><span className="font-medium">Department:</span> {selectedCandidate.department}</p>
-                    <p><span className="font-medium">Expected Salary:</span> {selectedCandidate.expectedSalary}</p>
-                    <p><span className="font-medium">Start Date:</span> {selectedCandidate.startDate}</p>
-                    <p><span className="font-medium">Applied:</span> {new Date(selectedCandidate.appliedDate).toLocaleDateString()}</p>
+                    <p><span className="font-medium text-gray-900">Position:</span> <span className="text-gray-700">{selectedCandidate.position}</span></p>
+                    <p><span className="font-medium text-gray-900">Department:</span> <span className="text-gray-700">{selectedCandidate.department}</span></p>
+                    <p><span className="font-medium text-gray-900">Expected Salary:</span> <span className="text-gray-700">{selectedCandidate.expectedSalary}</span></p>
+                    <p><span className="font-medium text-gray-900">Start Date:</span> <span className="text-gray-700">{selectedCandidate.startDate}</span></p>
+                    <p><span className="font-medium text-gray-900">Applied:</span> <span className="text-gray-700">{new Date(selectedCandidate.appliedDate).toLocaleDateString()}</span></p>
                   </div>
                 </div>
               </div>
@@ -554,7 +601,7 @@ const ApplicationsDashboardPage: React.FC = () => {
                     href={selectedCandidate.resume}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className="inline-flex items-center px-3 py-2 border border-gray-400 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-900 bg-gray-50 hover:bg-gray-100"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -565,7 +612,7 @@ const ApplicationsDashboardPage: React.FC = () => {
                     href={selectedCandidate.ktp}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className="inline-flex items-center px-3 py-2 border border-gray-400 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-900 bg-gray-50 hover:bg-gray-100"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -581,7 +628,7 @@ const ApplicationsDashboardPage: React.FC = () => {
                   value={selectedCandidate.notes}
                   onChange={(e) => addNote(selectedCandidate.id, e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-400 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                   placeholder="Add your notes about this candidate..."
                 />
               </div>
@@ -593,15 +640,36 @@ const ApplicationsDashboardPage: React.FC = () => {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => {
-                    // Add interview scheduling logic here
-                    alert('Interview scheduling feature coming soon!');
-                  }}
-                  className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Schedule Interview
-                </button>
+                {isScheduling ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="date"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
+                    />
+                    <button
+                      onClick={() => setIsScheduling(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleScheduleInterview}
+                      disabled={!scheduleDate}
+                      className="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsScheduling(true)}
+                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Schedule Interview
+                  </button>
+                )}
               </div>
             </div>
           </div>
